@@ -239,6 +239,32 @@ python -m wewrite_gateway doctor # 线上体检
 - [WeWrite](https://github.com/imraywang/wewrite)：Markdown → 微信 HTML 的排版内核（18 套主题）
 - [wx-draft-worker](https://github.com/wimdaw/wx-draft-worker)：Cloudflare Worker 网关，负责 token、图片转存与草稿提交
 
+## Windows 一键脚本（可拖拽）
+
+不想记命令的话，把 Markdown 文件**直接拖到**脚本图标上即可：它会自动生成封面（若你
+没提供）→ 排版 → 推入草稿箱。
+
+```bat
+:: scripts\push_draft.bat  （把路径里的 PY / PROJ 改成你的）
+push_draft.bat "我的文章.md"                 :: 封面自动生成为 我的文章-cover.png
+push_draft.bat "我的文章.md" "我的封面.png"   :: 用指定封面
+```
+
+配合一份**全局配置**，就能在任意目录推送（不必每个项目都放 `.env`）：
+
+```bash
+# ~/.wewrite-gateway.env
+WX_GATEWAY_URL=https://wx-draft-worker.<你的子域>.workers.dev
+WX_GATEWAY_TOKEN=wxk_xxxxxxxx
+WX_GATEWAY_AUTHOR=百晓文苑
+WX_GATEWAY_THEME=professional-clean
+# WX_GATEWAY_PROXY=http://127.0.0.1:10808   # 需要本地代理时
+```
+
+配置查找顺序（越靠前越优先）：命令行参数 → 环境变量 → `./.env` → `./.env.local`
+→ `~/.wewrite-gateway.env` → `~/.config/wewrite-gateway.yaml`。
+`doctor` 会打印每个值的**具体来源文件**。
+
 ## 许可
 
 MIT © wimdaw
