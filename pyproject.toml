@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wewrite-draft-gateway"
+version = "1.0.0"
+description = "把 WeWrite 的公众号排版结果推送到自建 wx-draft-worker 网关（免 access_token / 免 IP 白名单 / 免素材上传）"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "wimdaw" }]
+keywords = ["wewrite", "wechat", "公众号", "draft", "cloudflare-workers", "skill"]
+dependencies = [
+    "requests>=2.32",
+    # wewrite 负责 Markdown → 微信兼容 HTML 的排版（18 套主题）
+    "wewrite>=4.2",
+]
+
+[project.urls]
+Repository = "https://github.com/wimdaw/wewrite-draft-gateway"
+Gateway = "https://github.com/wimdaw/wx-draft-worker"
+
+[project.scripts]
+wewrite-push = "wewrite_gateway.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
