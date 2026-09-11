@@ -63,7 +63,7 @@ class Settings:
     def load(cls, url: Optional[str] = None, token: Optional[str] = None,
              theme: Optional[str] = None, account_id: Optional[str] = None,
              proxy: Optional[str] = None, timeout: Optional[int] = None) -> "Settings":
-        env_file = _read_dotenv_files()
+        env_file, env_src = _read_dotenv_files()
         yaml_vals = _read_yaml_file()
         src: dict[str, Any] = {}
 
@@ -83,25 +83,25 @@ class Settings:
 
         st = cls()
         st.url = (pick(ENV_URL, url,
-                       ("本地 .env", env_file.get(ENV_URL)),
+                       (env_src.get(ENV_URL, "本地 .env"), env_file.get(ENV_URL)),
                        ("~/.config/wewrite-gateway.yaml", yaml_vals.get("url"))) or "").rstrip("/")
         st.token = (pick(ENV_TOKEN, token,
-                         ("本地 .env", env_file.get(ENV_TOKEN)),
+                         (env_src.get(ENV_TOKEN, "本地 .env"), env_file.get(ENV_TOKEN)),
                          ("~/.config/wewrite-gateway.yaml", yaml_vals.get("token"))) or "")
         st.user_agent = (pick(ENV_UA, None,
-                              ("本地 .env", env_file.get(ENV_UA)),
+                              (env_src.get(ENV_UA, "本地 .env"), env_file.get(ENV_UA)),
                               ("默认值", DEFAULT_UA)) or DEFAULT_UA)
         st.account_id = pick(ENV_ACCOUNT, account_id,
-                             ("本地 .env", env_file.get(ENV_ACCOUNT)),
+                             (env_src.get(ENV_ACCOUNT, "本地 .env"), env_file.get(ENV_ACCOUNT)),
                              ("~/.config/wewrite-gateway.yaml", yaml_vals.get("account_id")))
         st.proxy = pick(ENV_PROXY, proxy,
-                        ("本地 .env", env_file.get(ENV_PROXY)),
+                        (env_src.get(ENV_PROXY, "本地 .env"), env_file.get(ENV_PROXY)),
                         ("~/.config/wewrite-gateway.yaml", yaml_vals.get("proxy")))
         st.default_author = pick(ENV_AUTHOR, None,
-                                 ("本地 .env", env_file.get(ENV_AUTHOR)),
+                                 (env_src.get(ENV_AUTHOR, "本地 .env"), env_file.get(ENV_AUTHOR)),
                                  ("~/.config/wewrite-gateway.yaml", yaml_vals.get("author")))
         st.default_theme = pick(ENV_THEME, theme,
-                                ("本地 .env", env_file.get(ENV_THEME)),
+                                (env_src.get(ENV_THEME, "本地 .env"), env_file.get(ENV_THEME)),
                                 ("~/.config/wewrite-gateway.yaml", yaml_vals.get("theme")))
         if timeout:
             st.timeout = int(timeout)
@@ -131,8 +131,18 @@ class Settings:
         return {"http": self.proxy, "https": self.proxy}
 
 
-def _read_dotenv_files() -> dict[str, str]:
+def _label(path: Path) -> str:
+    """把配置文件路径写成好认的形式，例如 ~/.wewrite-gateway.env。"""
+    try:
+        return "~/" + path.relative_to(Path.home()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _read_dotenv_files() -> tuple[dict[str, str], dict[str, str]]:
+    """返回 (键值表, 每个键来自哪个文件)——来源精确到文件，便于 doctor 排查。"""
     values: dict[str, str] = {}
+    sources: dict[str, str] = {}
     for path in reversed(ENV_FILES):        # 倒序覆盖，保证靠前的文件优先级更高
         if not path.is_file():
             continue
@@ -142,10 +152,12 @@ def _read_dotenv_files() -> dict[str, str]:
                 if not line or line.startswith("#") or "=" not in line:
                     continue
                 key, _, val = line.partition("=")
-                values[key.strip()] = val.strip().strip('"').strip("'")
+                key = key.strip()
+                values[key] = val.strip().strip('"').strip("'")
+                sources[key] = _label(path)
         except OSError:
             continue
-    return values
+    return values, sources
 
 
 def _read_yaml_file() -> dict[str, Any]:
